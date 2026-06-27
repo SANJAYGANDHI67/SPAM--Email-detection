@@ -1,0 +1,379 @@
+# ==========================================================
+#               SPAM EMAIL DETECTION USING ML
+#        TF-IDF + Multinomial Naive Bayes Classifier
+# ==========================================================
+
+# ==========================
+# IMPORT LIBRARIES
+# ==========================
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+
+from sklearn.model_selection import train_test_split
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.naive_bayes import MultinomialNB
+
+from sklearn.metrics import accuracy_score
+from sklearn.metrics import classification_report
+from sklearn.metrics import confusion_matrix
+
+import pickle
+
+# ==========================
+# LOAD DATASET
+# ==========================
+
+print("=" * 60)
+print("Loading Dataset...")
+print("=" * 60)
+
+df = pd.read_csv("spam.csv", encoding="latin-1")
+
+print("\nDataset Loaded Successfully!")
+
+# ==========================
+# REMOVE UNUSED COLUMNS
+# ==========================
+
+df.drop(
+    columns=[
+        "Unnamed: 2",
+        "Unnamed: 3",
+        "Unnamed: 4"
+    ],
+    inplace=True
+)
+
+# Rename columns
+
+df.columns = [
+    "Label",
+    "Message"
+]
+
+# ==========================
+# BASIC INFORMATION
+# ==========================
+
+print("\nFirst Five Rows\n")
+
+print(df.head())
+
+print("\nDataset Shape")
+
+print(df.shape)
+
+print("\nColumn Names")
+
+print(df.columns)
+
+print("\nMissing Values")
+
+print(df.isnull().sum())
+
+print("\nClass Distribution")
+
+print(df["Label"].value_counts())
+
+# ==========================
+# DATA VISUALIZATION
+# ==========================
+
+spam_count = df["Label"].value_counts()
+
+plt.figure(figsize=(6,5))
+
+plt.bar(
+    spam_count.index,
+    spam_count.values
+)
+
+plt.title("Spam vs Ham Messages")
+
+plt.xlabel("Class")
+
+plt.ylabel("Count")
+
+plt.show()
+
+# ==========================
+# LABEL ENCODING
+# ==========================
+
+print("\nEncoding Labels...")
+
+df["Label"] = df["Label"].map({
+
+    "ham":0,
+
+    "spam":1
+
+})
+
+print("Encoding Completed")
+
+# ==========================
+# FEATURES & TARGET
+# ==========================
+
+X = df["Message"]
+
+y = df["Label"]
+
+print("\nTotal Messages :",len(X))
+
+print("Total Labels :",len(y))
+
+# ==========================
+# TRAIN TEST SPLIT
+# ==========================
+
+print("\nSplitting Dataset...")
+
+X_train, X_test, y_train, y_test = train_test_split(
+
+    X,
+
+    y,
+
+    test_size=0.20,
+
+    random_state=42,
+
+    stratify=y
+
+)
+
+print("Training Samples :",len(X_train))
+
+print("Testing Samples :",len(X_test))
+
+# ==========================
+# TF-IDF VECTORIZATION
+# ==========================
+
+print("\nConverting Text into Numerical Features...")
+
+vectorizer = TfidfVectorizer(
+
+    stop_words="english",
+
+    max_features=5000
+
+)
+
+X_train = vectorizer.fit_transform(X_train)
+
+X_test = vectorizer.transform(X_test)
+
+print("Vectorization Completed")
+
+print("Feature Size :",X_train.shape)
+
+# ==========================
+# MODEL CREATION
+# ==========================
+
+print("\nCreating Model...")
+
+model = MultinomialNB()
+
+print("Model Created Successfully")
+
+# ==========================
+# TRAIN MODEL
+# ==========================
+
+print("\nTraining Started...")
+
+model.fit(
+
+    X_train,
+
+    y_train
+
+)
+
+print("Training Completed Successfully")
+
+print("\nReady for Prediction...")
+
+
+
+
+# ==========================
+# MAKE PREDICTIONS
+# ==========================
+
+print("\nMaking Predictions...")
+
+y_pred = model.predict(X_test)
+
+print("Prediction Completed Successfully")
+
+# ==========================
+# MODEL ACCURACY
+# ==========================
+
+accuracy = accuracy_score(y_test, y_pred)
+
+print("\n" + "=" * 60)
+print("MODEL PERFORMANCE")
+print("=" * 60)
+
+print(f"\nAccuracy : {accuracy * 100:.2f}%")
+
+# ==========================
+# CONFUSION MATRIX
+# ==========================
+
+cm = confusion_matrix(y_test, y_pred)
+
+print("\nConfusion Matrix\n")
+
+print(cm)
+
+# ==========================
+# CLASSIFICATION REPORT
+# ==========================
+
+print("\nClassification Report\n")
+
+print(classification_report(y_test, y_pred))
+
+# ==========================
+# SAVE MODEL
+# ==========================
+
+print("\nSaving Model...")
+
+pickle.dump(
+    model,
+    open("spam_model.pkl", "wb")
+)
+
+pickle.dump(
+    vectorizer,
+    open("vectorizer.pkl", "wb")
+)
+
+print("Model Saved Successfully")
+
+# ==========================
+# LOAD SAVED MODEL
+# ==========================
+
+loaded_model = pickle.load(
+    open("spam_model.pkl", "rb")
+)
+
+loaded_vectorizer = pickle.load(
+    open("vectorizer.pkl", "rb")
+)
+
+print("Saved Model Loaded Successfully")
+
+# ==========================
+# SAMPLE PREDICTIONS
+# ==========================
+
+sample_messages = [
+
+    "Congratulations! You won a FREE iPhone. Click here now.",
+
+    "Hi Sanjay, are you coming to college today?",
+
+    "URGENT! Claim your ₹50000 reward immediately.",
+
+    "Meeting is scheduled for tomorrow at 10 AM."
+
+]
+
+print("\n" + "=" * 60)
+print("SAMPLE PREDICTIONS")
+print("=" * 60)
+
+for msg in sample_messages:
+
+    vector = loaded_vectorizer.transform([msg])
+
+    result = loaded_model.predict(vector)[0]
+
+    print("\nMessage :")
+
+    print(msg)
+
+    if result == 1:
+
+        print("Prediction : SPAM")
+
+    else:
+
+        print("Prediction : HAM")
+
+# ==========================
+# USER INPUT PREDICTION
+# ==========================
+
+print("\n" + "=" * 60)
+print("LIVE SPAM DETECTION")
+print("=" * 60)
+
+while True:
+
+    message = input("\nEnter Email/SMS (type 'exit' to quit): ")
+
+    if message.lower() == "exit":
+
+        print("\nExiting Program...")
+
+        break
+
+    transformed = loaded_vectorizer.transform([message])
+
+    prediction = loaded_model.predict(transformed)[0]
+
+    probability = loaded_model.predict_proba(transformed)[0]
+
+    if prediction == 1:
+
+        print("\nPrediction : SPAM")
+
+        print(f"Confidence : {max(probability)*100:.2f}%")
+
+    else:
+
+        print("\nPrediction : HAM (NOT SPAM)")
+
+        print(f"Confidence : {max(probability)*100:.2f}%")
+
+# ==========================
+# PROJECT SUMMARY
+# ==========================
+
+print("\n" + "=" * 60)
+print("PROJECT SUMMARY")
+print("=" * 60)
+
+print("Algorithm          : Multinomial Naive Bayes")
+print("Vectorization      : TF-IDF")
+print("Dataset            : SMS Spam Collection")
+print(f"Training Samples   : {len(X_train.toarray())}")
+print(f"Testing Samples    : {len(X_test.toarray())}")
+print(f"Accuracy           : {accuracy*100:.2f}%")
+
+print("\nProject Executed Successfully.")
+
+print("=" * 60)
+
+
+
+
+
+
+
+
+
+
